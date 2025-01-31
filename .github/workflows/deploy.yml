@@ -20,8 +20,7 @@ jobs:
       - name: Install OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-version: 5.2
-          dune-cache: true
+          ocaml-compiler: 5
 
       - name: Install Dependencies
         run: |
