@@ -1,0 +1,39 @@
+name: Deploy Markdown to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OCaml
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-version: 5.2
+          dune-cache: true
+
+      - name: Install Dependencies
+        run: |
+          opam install omd str
+
+      - name: Generate HTML
+        run: |
+          dune exec ocaml_ssg posts dist
+      
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: ./dist
+

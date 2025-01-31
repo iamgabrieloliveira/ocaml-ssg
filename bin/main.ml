@@ -64,9 +64,9 @@ let read_file filename =
   close_in ic;
   content
 
-let read_files_in_dir dir =
+let files_in_dir dir =
   Sys.readdir dir |> Array.to_list
-  |> List.map (fun filename -> read_file (Filename.concat dir filename))
+  |> List.map (fun filename -> Filename.concat dir filename)
 
 let convert_markdown_to_html markdown = markdown |> Omd.of_string |> Omd.to_html
 
@@ -119,7 +119,7 @@ let () =
     match Sys.is_directory input_file with
     | false -> process_content state
     | true ->
-        let files = read_files_in_dir input_file in
+        let files = files_in_dir input_file in
 
         List.iter
           (fun file -> process_content { state with input_file = file })
