@@ -7,6 +7,9 @@ let html_template =
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
     <title><!-- title --></title>
 </head>
 <body>
@@ -36,6 +39,22 @@ let html_template =
 </html>
 |}
 
+type metadata = (string * string) list
+
+type post = {
+  path : string;
+  title : string;
+  content : string;
+  metadata : metadata;
+}
+
+let read_file filename =
+  let ic = open_in filename in
+  let length = in_channel_length ic in
+  let content = really_input_string ic length in
+  close_in ic;
+  content
+
 let extract_metadata content =
   let lines = String.split_on_char '\n' content in
   match lines with
@@ -57,17 +76,6 @@ let extract_metadata content =
       (metadata, String.concat "\n" markdown_lines)
   | _ -> ([], content)
 
-let read_file filename =
-  let ic = open_in filename in
-  let length = in_channel_length ic in
-  let content = really_input_string ic length in
-  close_in ic;
-  content
-
-let files_in_dir dir =
-  Sys.readdir dir |> Array.to_list
-  |> List.map (fun filename -> Filename.concat dir filename)
-
 let convert_markdown_to_html markdown = markdown |> Omd.of_string |> Omd.to_html
 
 let write_file filename content =
@@ -75,52 +83,52 @@ let write_file filename content =
   output_string oc content;
   close_out oc
 
-let insert_content_to_template template content =
-  Str.global_replace (Str.regexp "<!-- content -->") content template
+let get_posts path =
+  let files = Sys.readdir path |> Array.to_list in
 
-let insert_metadata template metadata =
-  List.fold_left
-    (fun temp (key, value) ->
-      let placeholder = Printf.sprintf "<!-- %s -->" key in
-      Str.global_replace (Str.regexp placeholder) value temp)
-    template metadata
+  List.map
+    (fun file ->
+      let path = Filename.concat path @@ file in
 
-type t = { input_file : string; output_path : string }
+      let metadata, content = read_file path |> extract_metadata in
 
-let process_content state =
-  let metadata, input = read_file state.input_file |> extract_metadata in
+      let title = List.assoc_opt "title" metadata in
 
-  let input_html = convert_markdown_to_html input in
+      match title with
+      | Some title -> { path; title; metadata; content }
+      | None -> raise (Invalid_argument "Title not found"))
+    files
 
-  let template = insert_metadata html_template metadata in
+let post_output_path post output_path =
+  Filename.basename post.path
+  |> Str.replace_first (Str.regexp ".md") ".html"
+  |> Filename.concat output_path
 
-  let final_html = insert_content_to_template template input_html in
-
-  let output_to =
-    Filename.basename state.input_file
-    |> Str.replace_first (Str.regexp ".md") ".html"
-    |> Filename.concat state.output_path
+let apply_to_template post =
+  let open Printf in
+  let open Str in
+  let title = List.assoc "title" post.metadata in
+  let content = convert_markdown_to_html post.content in
+  let template =
+    Str.global_replace (Str.regexp "<!-- title -->") title html_template
   in
-
-  print_endline output_to;
-
-  write_file output_to final_html;
-  Printf.printf "Converted %s to %s\n" state.input_file output_to
+  Str.global_replace (Str.regexp "<!-- content -->") content template
 
 let () =
   if Array.length Sys.argv <> 3 then
-    Printf.eprintf "Usage: %s <input.md> <output.html>\n" Sys.argv.(0)
+    Printf.eprintf "Usage: %s <input-dir> <output-dir>\n" Sys.argv.(0)
   else
-    let input_file = Sys.argv.(1) in
-    let output_file = Sys.argv.(2) in
+    let input_path = Sys.argv.(1) in
+    let output_path = Sys.argv.(2) in
 
-    let state = { input_file; output_path = output_file } in
+    let posts = get_posts input_path in
 
-    match Sys.is_directory input_file with
-    | false -> process_content state
-    | true ->
-        let files = files_in_dir input_file in
+    List.iter
+      (fun post ->
+        let html = apply_to_template post in
+        let path = post_output_path post output_path in
 
-        List.iter
-          (fun file -> process_content { state with input_file = file })
-          files
+        write_file path html)
+      posts;
+
+    ()
