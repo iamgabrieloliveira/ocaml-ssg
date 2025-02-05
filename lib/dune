@@ -1,3 +1,2 @@
 (library
- (name ocaml_ssg)
- (libraries omd))
+ (name ocaml_ssg))

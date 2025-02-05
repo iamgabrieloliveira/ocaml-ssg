@@ -1,15 +1,15 @@
-(lang dune 3.15)
+(lang dune 3.7)
 
 (name ocaml_ssg)
 
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github iamgabrieloliveira/ocaml-ssg))
 
-(authors "Author Name")
+(authors "Gabriel Oliveira")
 
-(maintainers "Maintainer Name")
+(maintainers "Gabriel Oliveira")
 
 (license LICENSE)
 
@@ -19,7 +19,7 @@
  (name ocaml_ssg)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune omd)
  (tags
   (topics "to describe" your project)))
 

@@ -1,4 +1,4 @@
 (executable
  (public_name ocaml_ssg)
  (name main)
- (libraries ocaml_ssg str))
+ (libraries ocaml_ssg str omd))
